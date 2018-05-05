@@ -1,0 +1,10 @@
+npm-debug.log
+node_modules/
+coverage/
+.env
+app/config/*.json
+logs/
+.DS_Store
+.nyc_output
+app/config/*.json
+*.csv
