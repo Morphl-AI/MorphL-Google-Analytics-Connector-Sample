@@ -13,7 +13,7 @@ gar_auth_service(json_file, scope = getOption("googleAuthR.scopes.selected"))
 ##########################################################
 
 # Pick the viewId you want to extract data from
-ga_id <- "your_view_id_here (set as number)" # account_list$viewId
+ga_id <- "your_view_id_here (set as number)"
 
 # Set dates interval
 start_date <- "YYYY-MM-DD"
