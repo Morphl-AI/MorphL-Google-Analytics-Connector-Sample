@@ -5,7 +5,7 @@ import re
 import time
 
 
-class GoogleAnalyticsMerger:
+class ProcessingDaysSinceLastSession:
 
     # Filter clients ids that don't match the GAxxxxxx.xxxxxxx format
     def eliminate_invalid_client_ids(self, data):
@@ -196,8 +196,8 @@ class GoogleAnalyticsMerger:
 
 
 def main():
-    google_analytics = GoogleAnalyticsMerger()
-    google_analytics.run()
+    data_processing = ProcessingDaysSinceLastSession()
+    data_processing.run()
 
 
 if __name__ == '__main__':
