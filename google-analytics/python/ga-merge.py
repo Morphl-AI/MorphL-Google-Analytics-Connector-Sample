@@ -1,5 +1,6 @@
 import pandas as pd
 from pandas.io.json import json_normalize
+import numpy as np
 import re
 import time
 
@@ -41,22 +42,45 @@ class GoogleAnalyticsMerger:
 
         return data
 
+    def get_number(self, x):
+        if isinstance(x, int):
+            return x
+
+        return int(x.replace(',', ''))
+
+    def convert_numeric_columns(self, data):
+        data['Entrances'] = data['Entrances'].map(self.get_number)
+        data['Pageviews'] = data['Pageviews'].map(self.get_number)
+        data['Unique Pageviews'] = data['Unique Pageviews'].map(
+            self.get_number)
+        data['Exits'] = data['Exits'].map(self.get_number)
+        data['Screen Views'] = data['Screen Views'].map(self.get_number)
+        data['Bounces'] = data['Bounces'].map(self.get_number)
+
+        data['Page Load Time (ms)'] = data['Page Load Time (ms)'].map(
+            self.get_number)
+
+        return data
+
     # Get all users, eliminating duplicate Client IDs
     def get_users_data(self):
 
-        month1_data = pd.read_csv('data/Table_May_June.csv')
-        month2_data = pd.read_csv('data/Table_June_July.csv')
+        month1_data = pd.read_csv(
+            'data/raw/Features_April_1.csv', low_memory=False)
+        month2_data = pd.read_csv(
+            'data/raw/Features_May_1.csv', low_memory=False)
+        month3_data = pd.read_csv(
+            'data/raw/Features_June_1.csv', low_memory=False)
 
         # concatenate user data into a single csv file
-        user_data = month2_data.append(month1_data)
-        user_data = self.eliminate_invalid_client_ids(user_data)
+        user_data = month3_data.append(month2_data)
+        user_data = user_data.append(month1_data)
 
-        # ! @todo eliminate calculated columns from data export
-        user_data = user_data.drop(
-            ['Sessions', 'Avg. Session Duration', 'Entrances / Pageviews', 'Pages / Session', '% Exit', 'Avg. Time on Page', 'Bounce Rate'], axis=1)
+        user_data = self.eliminate_invalid_client_ids(user_data)
 
         # @todo ! Avg. Page Load Time is always null, eliminate from export
         user_data = self.convert_time_columns(user_data)
+        user_data = self.convert_numeric_columns(user_data)
 
         # sum up columns
         user_agg_data = user_data.groupby('Client ID', as_index=False).agg(
@@ -108,11 +132,14 @@ class GoogleAnalyticsMerger:
     # Aggregate sessions data at the user level
     def get_sessions_data(self):
 
-        session1_data = pd.read_csv('data/Table_2_May_June.csv')
-        session2_data = pd.read_csv('data/Table_2_June_July.csv')
+        month1_data = pd.read_csv('data/raw/Features_April_2.csv')
+        month2_data = pd.read_csv('data/raw/Features_May_2.csv')
+        month3_data = pd.read_csv('data/raw/Features_June_2.csv')
 
         # concatenate session data
-        session_data = session1_data.append(session2_data)
+        session_data = month3_data.append(month2_data)
+        session_data = session_data.append(month1_data)
+
         session_data = self.eliminate_invalid_client_ids(session_data)
 
         # order sessions, newest sessions should appear first
