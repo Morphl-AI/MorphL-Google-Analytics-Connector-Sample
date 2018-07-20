@@ -7,6 +7,7 @@ from pandas.io.json import json_normalize
 import numpy as np
 import re
 import time
+import matplotlib.pyplot as plt
 from procbase import ProcessingBase
 
 
@@ -66,7 +67,7 @@ class ProcessingChurn(ProcessingBase):
                 'Page Load Time (ms)': 'sum',
                 'Sessions': 'sum',
             }
-        ).rename(columns={'Days Since Last Session': 'Avg. Days Since Last Session'})
+        ).rename(columns={'Days Since Last Session': 'Avg. Days Between Sessions'})
 
         # delete the columns that were already aggregated
         data = data.drop(
@@ -95,15 +96,43 @@ class ProcessingChurn(ProcessingBase):
         # eliminate duplicate clients ids (returning users)
         all_users = all_users.drop_duplicates(subset='Client ID')
 
-        all_users.to_csv('data/churn.csv')
+        # keep only users with at least 2 sessions (retained)
+        all_users = all_users.drop(
+            all_users[all_users['Count of Sessions'] < 2].index)
+
+        churn_threshold = all_users['Avg. Days Between Sessions'].mean()
+        print('Churn threshold', churn_threshold)
+        all_users['Churned'] = (
+            all_users['Days Since Last Session'] > churn_threshold) * 1
+
+        return all_users
 
     def run(self):
-        self.get_users_data()
+        users = self.get_users_data()
+        users.to_csv('data/churn.csv')
+
+    def plot_histogram(self, column_name):
+
+        users = pd.read_csv('data/churn.csv', low_memory=False)
+        a = np.histogram(users[column_name])
+
+        vert_hist = np.histogram(users[column_name], bins=100)
+
+        ax1 = plt.subplot(2, 1, 1)
+        ax1.set(title=column_name, ylabel='Days')
+        ax1.plot(vert_hist[0], vert_hist[1][:-1], '*g')
+
+        ax2 = plt.subplot(2, 1, 2)
+        ax2.set(ylabel='No. users')
+        ax2.hist(users[column_name], bins=100, orientation="vertical")
+
+        plt.show()
 
 
 def main():
     data_processing = ProcessingChurn()
     data_processing.run()
+    # data_processing.plot_histogram('Avg. Days Between Sessions')
 
 
 if __name__ == '__main__':
