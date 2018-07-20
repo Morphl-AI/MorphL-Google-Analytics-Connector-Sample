@@ -111,7 +111,13 @@ class ProcessingDaysSinceLastSession(ProcessingBase):
         # separate sessions data that needs to be aggregated
         # sum up hits and sessions, get the last count of sessions value
         session_agg_data = session_data.groupby('Client ID', as_index=False).agg(
-            {'Count of Sessions': 'max', 'Sessions': 'sum', 'Hits': 'sum'})
+            {
+                'Count of Sessions': 'max',
+                'Sessions': 'sum',
+                'Hits': 'sum',
+                'Days Since Last Session': 'mean',
+            }
+        ).rename(columns={'Days Since Last Session': 'Avg. Days Since Last Session'})
 
         # keep only a single row for each client id
         session_data = session_data.drop_duplicates(subset='Client ID')
@@ -154,7 +160,7 @@ class ProcessingDaysSinceLastSession(ProcessingBase):
         # add back calculated metrics
         # all_data = self.calculate_metrics(all_data)
 
-        all_data.to_csv('data/all_data.csv')
+        all_data.to_csv('data/days-since-last-session.csv')
 
 
 def main():
