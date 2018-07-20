@@ -40,3 +40,14 @@ class ProcessingBase:
             return x
 
         return int(x.replace(',', ''))
+
+    # Convert HH:MM:SS columns into seconds
+    def convert_columns_to_numbers(self, data, columns_format, columns=[]):
+
+        for column in columns:
+            if columns_format == 'time':
+                data[column] = data[column].map(self.get_sec)
+            else:
+                data[column] = data[column].map(self.get_number)
+
+        return data

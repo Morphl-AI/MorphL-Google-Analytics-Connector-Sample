@@ -1,2 +1,3 @@
 credentials/*
 data/*
+__pycache__/*

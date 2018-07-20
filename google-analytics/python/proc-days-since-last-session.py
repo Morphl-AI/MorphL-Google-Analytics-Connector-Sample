@@ -12,31 +12,6 @@ from procbase import ProcessingBase
 
 class ProcessingDaysSinceLastSession(ProcessingBase):
 
-    # Convert HH:MM:SS columns into seconds
-    def convert_time_columns(self, data):
-
-        data['Session Duration'] = data['Session Duration'].map(
-            self.get_sec)
-
-        data['Time on Page'] = data['Time on Page'].map(
-            self.get_sec)
-
-        return data
-
-    def convert_numeric_columns(self, data):
-        data['Entrances'] = data['Entrances'].map(self.get_number)
-        data['Pageviews'] = data['Pageviews'].map(self.get_number)
-        data['Unique Pageviews'] = data['Unique Pageviews'].map(
-            self.get_number)
-        data['Exits'] = data['Exits'].map(self.get_number)
-        data['Screen Views'] = data['Screen Views'].map(self.get_number)
-        data['Bounces'] = data['Bounces'].map(self.get_number)
-
-        data['Page Load Time (ms)'] = data['Page Load Time (ms)'].map(
-            self.get_number)
-
-        return data
-
     # Get all users, eliminating duplicate Client IDs
     def get_users_data(self):
 
@@ -53,9 +28,21 @@ class ProcessingDaysSinceLastSession(ProcessingBase):
 
         user_data = self.eliminate_invalid_client_ids(user_data)
 
-        # @todo ! Avg. Page Load Time is always null, eliminate from export
-        user_data = self.convert_time_columns(user_data)
-        user_data = self.convert_numeric_columns(user_data)
+        user_data = self.convert_columns_to_numbers(
+            user_data, 'time', ['Session Duration', 'Time on Page'])
+        user_data = self.convert_columns_to_numbers(
+            user_data,
+            'string',
+            [
+                'Entrances',
+                'Pageviews',
+                'Unique Pageviews',
+                'Exits',
+                'Screen Views',
+                'Bounces',
+                'Page Load Time (ms)'
+            ]
+        )
 
         # sum up columns
         user_agg_data = user_data.groupby('Client ID', as_index=False).agg(
