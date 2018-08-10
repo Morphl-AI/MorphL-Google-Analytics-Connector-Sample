@@ -38,7 +38,7 @@ class ProcessingNextAction(ProcessingBase):
 
         Returns: the output dataframe
         """
-        result = pd.DataFrame()
+        result = []
 
         # sort by timestamp to have the data in chronological order, then discard the timestamp
         sorted_time_asc_df = self.df.sort_values('Date Hour and Minute')
@@ -48,17 +48,18 @@ class ProcessingNextAction(ProcessingBase):
 
         no_groups = len(client_grouped_df)
         curr_group = 0
+
+        available_cols = list(discarded_date_df.columns.values)
+        # don't sum over certain cols, since it does not make sense
+        cols_to_sum_over = [col for col in available_cols if col not in ['SessionID', 'Client ID', 'User Type']]
+
         for client_id, client_group in client_grouped_df:
             # print some statistics now and then to get a sense of how far we've got
             if curr_group % 50 == 0:
                 print('Processing client group %i of %i' % (curr_group, no_groups))
 
-            # group by session
+            # group by session, then sum
             session_grouped_df = client_group.groupby('SessionID', axis=0, sort=False)
-
-            available_columns = list(client_group.columns.values)
-            # don't sum over certain cols, since it does not make sense
-            cols_to_sum_over = [col for col in available_columns if col not in ['SessionID', 'Client ID', 'User Type']]
             session_summed_df = session_grouped_df[cols_to_sum_over].sum()
 
             # client id & user type need not be summed
@@ -67,10 +68,10 @@ class ProcessingNextAction(ProcessingBase):
 
             # the concat between the two previous df's is what we need for one client
             summed_df = pd.concat([client_user_type_df, session_summed_df], axis=1, sort=False)
-            result = result.append(summed_df)
+            result.append(summed_df)
             curr_group += 1
 
-        return result
+        return pd.concat(result)
 
     def run(self):
         self.preprocess()
