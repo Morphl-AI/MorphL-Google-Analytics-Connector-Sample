@@ -33,27 +33,56 @@ class ProcessingNextAction(ProcessingBase):
         self.df = ProcessingBase.one_hot_encode_col(self.df, 'Event Label')
 
     def gen_group_sorted_df(self):
-        print(self.df.head(10))
-        client_grouped_df = self.df.groupby('Client ID', axis=0, sort=False)
-        for client_id, client_group in client_grouped_df:
-            print('Client ID:', client_id)
-            session_grouped_df = client_group.groupby('SessionID', axis=0, sort=False)
-            for session_id, group in session_grouped_df:
-                print('SessionID', session_id)
+        """
+        Does the aggregations and calculations for client & session groups
 
-                sorted_session_data = group.sort_values('Date Hour and Minute', ascending=True)
-                print(sorted_session_data)
+        Returns: the output dataframe
+        """
+        result = pd.DataFrame()
+
+        # sort by timestamp to have the data in chronological order, then discard the timestamp
+        sorted_time_asc_df = self.df.sort_values('Date Hour and Minute')
+        discarded_date_df = sorted_time_asc_df.drop('Date Hour and Minute', axis=1)
+        # group by client id
+        client_grouped_df = discarded_date_df.groupby('Client ID', axis=0, sort=False)
+
+        no_groups = len(client_grouped_df)
+        curr_group = 0
+        for client_id, client_group in client_grouped_df:
+            # print some statistics now and then to get a sense of how far we've got
+            if curr_group % 50 == 0:
+                print('Processing client group %i of %i' % (curr_group, no_groups))
+
+            # group by session
+            session_grouped_df = client_group.groupby('SessionID', axis=0, sort=False)
+
+            available_columns = list(client_group.columns.values)
+            # don't sum over certain cols, since it does not make sense
+            cols_to_sum_over = [col for col in available_columns if col not in ['SessionID', 'Client ID', 'User Type']]
+            session_summed_df = session_grouped_df[cols_to_sum_over].sum()
+
+            # client id & user type need not be summed
+            # just take the first value in the group, since all of them are the same
+            client_user_type_df = session_grouped_df[['Client ID', 'User Type']].nth(0)
+
+            # the concat between the two previous df's is what we need for one client
+            summed_df = pd.concat([client_user_type_df, session_summed_df], axis=1, sort=False)
+            result.append(summed_df)
+            curr_group += 1
+
+        return result
 
     def run(self):
         self.preprocess()
-        # group_sorted_df = self.gen_group_sorted_df()
-        # self.output(group_sorted_df)
+        group_sorted_df = self.gen_group_sorted_df()
+        self.output(group_sorted_df)
 
     def output(self, df):
         df.to_csv(self.outfile)
 
 
 def main():
+    # Configure pandas console output to be able to see more columns
     pd.set_option('display.max_rows', 200)
     pd.set_option('display.max_columns', 10)
     pd.set_option('display.width', 1000)
