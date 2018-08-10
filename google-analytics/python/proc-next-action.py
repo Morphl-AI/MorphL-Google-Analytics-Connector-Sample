@@ -67,7 +67,7 @@ class ProcessingNextAction(ProcessingBase):
 
             # the concat between the two previous df's is what we need for one client
             summed_df = pd.concat([client_user_type_df, session_summed_df], axis=1, sort=False)
-            result.append(summed_df)
+            result = result.append(summed_df)
             curr_group += 1
 
         return result
