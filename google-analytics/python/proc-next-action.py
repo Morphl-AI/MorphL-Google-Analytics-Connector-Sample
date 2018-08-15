@@ -22,9 +22,6 @@ class ProcessingNextAction(ProcessingBase):
         self.outfile = outfile
 
     def preprocess(self):
-        """
-        Preprocesses the data as a whole (not taking relationships into account)
-        """
         self.df = self.eliminate_invalid_client_ids(self.df)
         # User type can be either 0 = New Visitor or 1 = Returning Visitor
         self.df, generated_mapping = ProcessingBase.discretize_col(self.df, 'User Type')
@@ -32,54 +29,26 @@ class ProcessingNextAction(ProcessingBase):
         self.df = ProcessingBase.one_hot_encode_col(self.df, 'Event Action')
         self.df = ProcessingBase.one_hot_encode_col(self.df, 'Event Label')
 
-    def gen_group_sorted_df(self):
+    def sort_df(self):
         """
         Does the aggregations and calculations for client & session groups
-
-        Returns: the output dataframe
         """
-        result = []
+        # sort by session id and timestamp to have the data in chronological order in session groups
+        sorted_time_asc_df = self.df.sort_values(['SessionID', 'Date Hour and Minute'])
+        self.df = sorted_time_asc_df
 
-        # sort by timestamp to have the data in chronological order, then discard the timestamp
-        sorted_time_asc_df = self.df.sort_values('Date Hour and Minute')
-        discarded_date_df = sorted_time_asc_df.drop('Date Hour and Minute', axis=1)
-        # group by client id
-        client_grouped_df = discarded_date_df.groupby('Client ID', axis=0, sort=False)
-
-        no_groups = len(client_grouped_df)
-        curr_group = 0
-
-        available_cols = list(discarded_date_df.columns.values)
-        # don't sum over certain cols, since it does not make sense
-        cols_to_sum_over = [col for col in available_cols if col not in ['SessionID', 'Client ID', 'User Type']]
-
-        for client_id, client_group in client_grouped_df:
-            # print some statistics now and then to get a sense of how far we've got
-            if curr_group % 50 == 0:
-                print('Processing client group %i of %i' % (curr_group, no_groups))
-
-            # group by session, then sum
-            session_grouped_df = client_group.groupby('SessionID', axis=0, sort=False)
-            session_summed_df = session_grouped_df[cols_to_sum_over].sum()
-
-            # client id & user type need not be summed
-            # just take the first value in the group, since all of them are the same
-            client_user_type_df = session_grouped_df[['Client ID', 'User Type']].nth(0)
-
-            # the concat between the two previous df's is what we need for one client
-            summed_df = pd.concat([client_user_type_df, session_summed_df], axis=1, sort=False)
-            result.append(summed_df)
-            curr_group += 1
-
-        return pd.concat(result)
+    def postprocess(self):
+        # self.df = ProcessingBase.one_hot_encode_col(self.df, 'Client ID')
+        pass
 
     def run(self):
         self.preprocess()
-        group_sorted_df = self.gen_group_sorted_df()
-        self.output(group_sorted_df)
+        self.sort_df()
+        self.postprocess()
+        self.output()
 
-    def output(self, df):
-        df.to_csv(self.outfile)
+    def output(self):
+        self.df.to_csv(self.outfile)
 
 
 def main():
