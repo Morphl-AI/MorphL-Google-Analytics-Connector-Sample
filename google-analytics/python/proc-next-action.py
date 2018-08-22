@@ -6,15 +6,6 @@ import pandas as pd
 
 from procbase import ProcessingBase
 
-# These can be used to restrict which Actions and/or labels are to be hot encoded
-# However, this is a lot of 'custom manual work', I will attempt to train a model using all the event data
-ACCEPTED_EVENT_ACTIONS = ['Click', 'Close video' 'Dismiss mobile banner', 'Entered viewport', 'Infinite loading fetch',
-                          'Menu Interaction', 'Open preview', 'Percentage', 'Play video', 'Subscribed',
-                          'Top articles time interval selection', 'User Engage']
-ACCEPTED_EVENT_LABELS = ['Banner at article end',
-                         'Homepage banner',
-                         'Homepage infinite articles list scroll down button']  # many more can be added here
-
 
 class ProcessingNextAction(ProcessingBase):
     def __init__(self, infile, outfile):
@@ -34,8 +25,8 @@ class ProcessingNextAction(ProcessingBase):
         Does the aggregations and calculations for client & session groups
         """
         # sort by session id and timestamp to have the data in chronological order in session groups
-        sorted_time_asc_df = self.df.sort_values(['SessionID', 'Date Hour and Minute'])
-        self.df = sorted_time_asc_df
+        sorted_sess_time_asc_df = self.df.sort_values(['SessionID', 'Date Hour and Minute'])
+        self.df = sorted_sess_time_asc_df
 
     def postprocess(self):
         # self.df = ProcessingBase.one_hot_encode_col(self.df, 'Client ID')
