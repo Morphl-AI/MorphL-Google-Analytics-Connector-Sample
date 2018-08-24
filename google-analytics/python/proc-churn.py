@@ -105,6 +105,8 @@ class ProcessingChurn(ProcessingBase):
         all_users['Churned'] = (
             all_users['Days Since Last Session'] > churn_threshold) * 1
 
+        all_users = all_users.drop(
+            ['Days Since Last Session', 'Avg. Days Between Sessions'], axis=1)
         return all_users
 
     def run(self):
