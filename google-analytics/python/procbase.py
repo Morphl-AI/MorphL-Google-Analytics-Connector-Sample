@@ -18,6 +18,48 @@ class ProcessingBase:
 
         return data[filter_data]
 
+    @staticmethod
+    def discretize_col(df, col, mapping=None):
+        """
+        Linear bijective transformation of a column according to the mapping dict
+        If no mapping dict is passed, then int values starting with 0 will be assigned to distinct values
+        Normally used to transform textual cols in numeric ones
+        E.g. ['Yes', 'No', 'No', 'Yes'] can become [1, 0, 0, 1] if mapping = {'Yes': 1, 'No': 0}
+
+        Args:
+            df = pandas dataframe
+            col = name of the column to be transformed
+            mapping (optional) = dict mapping from current value to transformed value
+
+        Returns:
+            df = the dataframe with the 'discretized' column
+            mapping = the mapping used (redundant if you pass in the mapping)
+        """
+        if mapping is None:
+            unique_vals = df[col].unique()
+            mapping = dict(zip(unique_vals, range(len(unique_vals))))
+        df[col] = df[col].map(mapping)
+        return df, mapping
+
+    @staticmethod
+    def one_hot_encode_col(df, col, accepted_values=None):
+        """
+        Appends one hot encoding columns to the dataframe for a certain col
+        Args:
+            df = pandas dataframe
+            col = name of the column to be hot encoded
+            accepted_values = array containing the accepted values for the specified column
+                              all other values will be mapped under the value 'Other'
+
+        Returns:
+            df = the dataframe with the hot encoded cols and _without_ the original col
+        """
+        if accepted_values is not None:
+            df[col] = df[col].apply(lambda x: x if x in accepted_values else 'Other')
+        one_hot_encoded_cols = pd.get_dummies(df[col], prefix=col, prefix_sep=' ')
+        df_without_original_col = df.drop(col, axis=1)
+        return pd.concat([df_without_original_col, one_hot_encoded_cols], axis=1, sort=False)
+
     # Transform Device Category values into boolean columns
     def split_device_category(self, data):
 
