@@ -1,5 +1,6 @@
 """Google Analytics Reporting API V4 Connector for the Morphl project"""
 
+from time import sleep
 from apiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
@@ -55,11 +56,25 @@ class GoogleAnalytics:
         if metrics_filters is not None:
             query_params['metricFilterClauses'] = metrics_filters
 
-        return self.analytics.reports().batchGet(
-            body={
-                'reportRequests': [query_params]
-            }
-        ).execute()
+        response_list = []
+        reports_object = self.analytics.reports()
+        page_token = None
+        while True:
+
+            # Working around the "Insufficient tokens for quota" error message
+            # The permanent solution to this is to increase the request quota in the developer console
+            # The default quota is 1K, the maximum is 10K
+            sleep(1)
+
+            if page_token:
+                query_params['pageToken'] = page_token
+            data_chunk = reports_object.batchGet(body={'reportRequests': [query_params]}).execute()
+            response_list.extend(data_chunk['reports'])
+            page_token = data_chunk['reports'][0].get('nextPageToken', None)
+            if not page_token:
+                break
+
+        return {'reports': response_list}
 
     # Transform list of dimensions names into objects with a 'name' property.
     def format_dimensions(self, dims):
